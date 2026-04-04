@@ -1,0 +1,15 @@
+package com.github.sor2171.backend.entity.vo.request
+
+import jakarta.validation.constraints.Email
+import kotlinx.serialization.Serializable
+import org.hibernate.validator.constraints.Length
+
+@Serializable
+data class PasswordResetVO(
+    @param:Email
+    val email: String = "",
+    @param:Length(min = 6, max = 6)
+    val code: String? = null,
+    @param:Length(min = 6, max = 20)
+    val password: String = "",
+)
