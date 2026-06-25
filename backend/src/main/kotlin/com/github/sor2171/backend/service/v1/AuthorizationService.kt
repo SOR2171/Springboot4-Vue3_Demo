@@ -2,6 +2,7 @@ package com.github.sor2171.backend.service.v1
 
 import com.github.sor2171.backend.entity.dto.Account
 import com.github.sor2171.backend.entity.dto.EmailVerificationMsg
+import com.github.sor2171.backend.entity.enums.EmailType
 import com.github.sor2171.backend.entity.vo.request.EmailRegisterVO
 import com.github.sor2171.backend.entity.vo.request.PasswordResetVO
 import com.github.sor2171.backend.entity.vo.response.ReloginVO
@@ -27,7 +28,7 @@ class AuthorizationService(
     private val stringRedisTemplate: ReactiveStringRedisTemplate,
     private val encoder: PasswordEncoder
 ) {
-    fun askEmailVerifyCode(type: String, email: String, ip: String): Mono<String> {
+    fun askEmailVerifyCode(type: EmailType, email: String, ip: String): Mono<String> {
         return verifyLimit(ip).flatMap { allowed ->
             if (allowed) {
                 val code = (100000..999999).random().toString()
@@ -52,32 +53,27 @@ class AuthorizationService(
     fun registerEmailAccount(vo: EmailRegisterVO): Mono<String> {
         val (email, code, username, password) = vo
 
-        return verifyCode(email, code).flatMap { error ->
-            if (!error.isBlank()) {
-                return@flatMap Mono.just(error)
+        return verifyCode(email, code)
+            .filter { it.isBlank() }
+            .switchIfEmpty(Mono.just("wrong code"))
+            .flatMap {
+                accountService.existAccountByEmail(email)
             }
-
-            accountService
-                .existAccountByEmail(email)
-                .flatMap { emailExists ->
-                    if (emailExists) {
-                        return@flatMap Mono.just("account with the same email already exists.")
-                    }
-                    accountService
-                        .existAccountByName(username)
-                        .flatMap { usernameExists ->
-                            if (usernameExists) {
-                                return@flatMap Mono.just("username already exists.")
-                            }
-
-                            val encodedPassword = encoder.encode(password)
+            .flatMap { emailExists ->
+                if (emailExists) {
+                    Mono.just("account with the same email already exists.")
+                } else {
+                    accountService.existAccountByName(username).flatMap { usernameExists ->
+                        if (usernameExists) {
+                            Mono.just("username already exists.")
+                        } else {
                             val account = Account(
-                                null,
-                                username,
-                                encodedPassword!!,
-                                email,
-                                "user",
-                                getCurrentDateTime()
+                                id = null,
+                                username = username,
+                                password = encoder.encode(password)!!,
+                                email = email,
+                                role = "user",
+                                registerTime = getCurrentDateTime()
                             )
 
                             Mono.fromCallable { accountService.save(account) }
@@ -90,31 +86,31 @@ class AuthorizationService(
                                     }
                                 }
                         }
+                    }
                 }
-        }
+            }
     }
 
     fun resetEmailAccountPassword(vo: PasswordResetVO): Mono<String> {
         val (email, code, password) = vo
 
-        return verifyCode(email, code).flatMap { error ->
-            if (!error.isBlank()) {
-                return@flatMap Mono.just(error)
-            } else {
-                val encodedPassword = encoder.encode(password)
-                    ?: return@flatMap Const.INTERNAL_ERROR_MONO
+        val encodedPassword =
+            encoder.encode(password)
+                ?: return Const.INTERNAL_ERROR_MONO
 
-                return@flatMap accountService
-                    .resetPasswordByEmail(email, encodedPassword)
-                    .flatMap { text ->
-                        if (text.isBlank()) {
-                            stringRedisTemplate
-                                .delete(Const.VERIFY_EMAIL_DATA + email)
-                                .then(Mono.just(text))
-                        } else Mono.just(text)
-                    }
-            }
-        }
+        return verifyCode(email, code)
+            .then(
+                accountService.resetPasswordByEmail(
+                    email,
+                    encodedPassword
+                )
+            )
+            .then(
+                stringRedisTemplate.delete(
+                    Const.VERIFY_EMAIL_DATA + email
+                )
+            )
+            .thenReturn("Password reset successfully")
     }
 
     fun jwtTokenRelogin(headerToken: String?): Mono<ReloginVO>? {
@@ -144,12 +140,9 @@ class AuthorizationService(
         return stringRedisTemplate.opsForValue()
             .get(Const.VERIFY_EMAIL_DATA + email)
             .flatMap { code ->
-                when {
-                    receivedCode == null || code != receivedCode ->
-                        Mono.just("verify code is wrong.")
-
-                    else -> Mono.just("")
-                }
+                if (receivedCode == null || code != receivedCode)
+                    Mono.just("verify code is wrong.")
+                else Mono.just("")
             }
             .switchIfEmpty(Mono.just("verify code has not been sent"))
     }

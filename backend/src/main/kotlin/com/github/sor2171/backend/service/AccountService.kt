@@ -11,5 +11,5 @@ interface AccountService : IService<Account>, ReactiveUserDetailsService {
     fun findAccountByEmail(email: String): Mono<Account>
     fun existAccountByName(username: String): Mono<Boolean>
     fun existAccountByEmail(email: String): Mono<Boolean>
-    fun resetPasswordByEmail(email: String, encodedPassword: String): Mono<String>
+    fun resetPasswordByEmail(email: String, encodedPassword: String): Mono<Void>
 }

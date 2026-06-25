@@ -27,70 +27,87 @@ class AccountServiceImpl : ServiceImpl<AccountMapper, Account>(), AccountService
             }
     }
 
-    override fun findAccountByName(username: String): Mono<Account> {
-        return Mono.fromCallable {
-            logger.info("Find account with name $username")
-            this.ktQuery()
+    override fun findAccountByName(username: String): Mono<Account> =
+        findAccount("name", username) {
+            ktQuery()
                 .eq(Account::username, username)
                 .one()
-        }.flatMap { account ->
-            Mono.just(account)
-        }.switchIfEmpty(Mono.error(UsernameNotFoundException("Account with name $username not found")))
-    }
+        }
 
-    override fun findAccountByEmail(email: String): Mono<Account> {
-        return Mono.fromCallable {
-            logger.info("Find account with email $email")
-            this.ktQuery()
+    override fun findAccountByEmail(email: String): Mono<Account> =
+        findAccount("email", email) {
+            ktQuery()
                 .eq(Account::email, email)
                 .one()
-        }.flatMap { account ->
-            Mono.just(account)
-        }.switchIfEmpty(Mono.error(UsernameNotFoundException("Account with email $email not found")))
-    }
+        }
 
-    override fun findAccountByNameOrEmail(text: String): Mono<Account> {
-        return findAccountByEmail(text)
-            .onErrorResume { findAccountByName(text) }
-    }
+    private fun findAccount(
+        fieldName: String,
+        value: String,
+        query: () -> Account?
+    ): Mono<Account> =
+        Mono.fromCallable {
+            logger.info("Find account with {} {}", fieldName, value)
+            query()
+        }.switchIfEmpty(
+            Mono.error(
+                UsernameNotFoundException("Account with $fieldName $value not found")
+            )
+        )
 
-    override fun existAccountByName(username: String): Mono<Boolean> {
-        return Mono.fromCallable {
-            logger.info("Determine if name $username exists")
-            this.ktQuery()
+    override fun findAccountByNameOrEmail(text: String): Mono<Account> =
+        findAccountByEmail(text).onErrorResume(
+            UsernameNotFoundException::class.java
+        ) {
+            findAccountByName(text)
+        }
+
+    override fun existAccountByName(username: String): Mono<Boolean> =
+        Mono.fromCallable {
+            logger.info("Determine if name {} exists", username)
+            ktQuery()
                 .eq(Account::username, username)
                 .exists()
         }
-    }
 
-    override fun existAccountByEmail(email: String): Mono<Boolean> {
-        return Mono.fromCallable {
-            logger.info("Determine if email $email exists")
-            this.ktQuery()
+    override fun existAccountByEmail(email: String): Mono<Boolean> =
+        Mono.fromCallable {
+            logger.info("Determine if email {} exists", email)
+            ktQuery()
                 .eq(Account::email, email)
                 .exists()
         }
-    }
 
-    override fun resetPasswordByEmail(email: String, encodedPassword: String): Mono<String> {
-        return existAccountByEmail(email).flatMap { exists ->
-            if (!exists) {
-                return@flatMap Mono.just("account with the email does not exist.")
-            }
+    override fun resetPasswordByEmail(
+        email: String,
+        encodedPassword: String
+    ): Mono<Void> =
+        existAccountByEmail(email)
+            .flatMap { exists ->
+                if (!exists) {
+                    return@flatMap Mono.error(
+                        UsernameNotFoundException(
+                            "Account with email $email not found"
+                        )
+                    )
+                }
 
-            Mono.fromCallable {
-                logger.info("Reset password by email $email")
-                this.ktUpdate()
-                    .eq(Account::email, email)
-                    .set(Account::password, encodedPassword)
-                    .update()
-            }.flatMap { success ->
-                if (success) {
-                    Mono.just("")
-                } else {
-                    Mono.just("something went wrong. Please contact the administrator.")
+                Mono.fromCallable {
+                    ktUpdate()
+                        .eq(Account::email, email)
+                        .set(Account::password, encodedPassword)
+                        .update()
                 }
             }
-        }
-    }
+            .flatMap { success ->
+                if (success) {
+                    Mono.empty()
+                } else {
+                    Mono.error(
+                        IllegalStateException(
+                            "Failed to reset password"
+                        )
+                    )
+                }
+            }
 }

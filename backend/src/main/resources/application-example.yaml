@@ -33,3 +33,12 @@ spring:
     #username: root
     #password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
+
+mybatis-plus:
+  type-handlers-package: com.github.sor2171.backend.config
+
+app:
+  flow-limit:
+    count: 1000
+    limit-time: 3
+    ban-time: 60
