@@ -27,9 +27,6 @@ spring:
     jwt:
       #key: 123456
       expire-hours: 168
-      ip-ban-limit: 10
-      ip-ban-time: 3
-      ip-ban-time-min: 1
   
   datasource:
     url: jdbc:mysql://localhost:3306/kotlin_springboot

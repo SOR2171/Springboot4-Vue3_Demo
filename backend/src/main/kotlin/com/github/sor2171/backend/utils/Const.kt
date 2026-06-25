@@ -1,5 +1,7 @@
 package com.github.sor2171.backend.utils
 
+import reactor.core.publisher.Mono
+
 object Const {
     const val FLOW_LIMIT_ORDER = -101
     
@@ -9,4 +11,6 @@ object Const {
 
     const val FLOW_LIMIT_COUNTER = "flow:counter:"
     const val FLOW_LIMIT_BLOCK = "flow:block:"
+
+    val INTERNAL_ERROR_MONO = Mono.just("something went wrong. Please contact the administrator.")
 }

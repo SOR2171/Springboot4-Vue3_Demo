@@ -1,6 +1,6 @@
 package com.github.sor2171.backend.filter
 
-import com.github.sor2171.backend.entity.RestBean
+import com.github.sor2171.backend.entity.ApiResponse
 import com.github.sor2171.backend.entity.toJsonString
 import com.github.sor2171.backend.utils.Const
 import org.springframework.core.annotation.Order
@@ -37,7 +37,7 @@ class FlowLimitFilter(
         response.statusCode = HttpStatus.FORBIDDEN
         response.headers.contentType = MediaType.APPLICATION_JSON
         val buffer = response.bufferFactory()
-            .wrap(RestBean.forbidden("Too many requests").toJsonString().toByteArray())
+            .wrap(ApiResponse.forbidden("Too many requests").toJsonString().toByteArray())
         return response.writeWith(Mono.just(buffer))
     }
 

@@ -1,6 +1,6 @@
 package com.github.sor2171.backend.config
 
-import com.github.sor2171.backend.entity.RestBean
+import com.github.sor2171.backend.entity.ApiResponse
 import com.github.sor2171.backend.entity.vo.response.AuthorizeVO
 import com.github.sor2171.backend.filter.JwtAuthorizeFilter
 import com.github.sor2171.backend.service.AccountService
@@ -50,13 +50,15 @@ class SecurityConfig(
             .authorizeExchange {
                 it
                     .pathMatchers(
-                        "/api/auth/relogin"
+                        "/api/v1/auth/relogin"
                     ).authenticated()
                     .pathMatchers(
-                        "/api/auth/**",
+                        "/api/v1/auth/**",
+                        "/ws/**",
                         "/error"
                     ).permitAll()
-                    .anyExchange().authenticated()
+                    .anyExchange()
+                    .authenticated()
             }
             .addFilterAt(loginAuthenticationFilter(), SecurityWebFiltersOrder.AUTHENTICATION)
             .addFilterAt(jwtAuthorizeFilter, SecurityWebFiltersOrder.AUTHENTICATION)
@@ -65,14 +67,14 @@ class SecurityConfig(
                     writeJsonResponse(
                         exchange,
                         HttpStatus.UNAUTHORIZED,
-                        RestBean.unauthenticated(ex.message)
+                        ApiResponse.unauthenticated(ex.message)
                     )
                 }
                     .accessDeniedHandler { exchange, ex ->
                         writeJsonResponse(
                             exchange,
                             HttpStatus.FORBIDDEN,
-                            RestBean.forbidden(ex.message)
+                            ApiResponse.forbidden(ex.message)
                         )
                     }
             }
@@ -85,7 +87,7 @@ class SecurityConfig(
     fun loginAuthenticationFilter(): AuthenticationWebFilter {
         val filter = AuthenticationWebFilter(reactiveAuthenticationManager())
         filter.setRequiresAuthenticationMatcher(
-            ServerWebExchangeMatchers.pathMatchers("/api/auth/login")
+            ServerWebExchangeMatchers.pathMatchers("/api/v1/auth/login")
         )
         filter.setServerAuthenticationConverter(loginAuthenticationConverter())
         filter.setAuthenticationSuccessHandler { webFilterExchange, authentication ->
@@ -102,7 +104,7 @@ class SecurityConfig(
                     writeJsonResponse(
                         webFilterExchange.exchange,
                         HttpStatus.OK,
-                        RestBean.success(vo)
+                        ApiResponse.success(vo)
                     )
                 }
         }
@@ -110,7 +112,7 @@ class SecurityConfig(
             writeJsonResponse(
                 webFilterExchange.exchange,
                 HttpStatus.UNAUTHORIZED,
-                RestBean.unauthenticated(exception.message)
+                ApiResponse.unauthenticated(exception.message)
             )
         }
         return filter
@@ -134,18 +136,18 @@ class SecurityConfig(
             }
         }
     }
-}
 
-internal inline fun <reified T> writeJsonResponse(
-    exchange: ServerWebExchange,
-    status: HttpStatus,
-    body: RestBean<T>
-): Mono<Void> {
-    val response = exchange.response
-    response.statusCode = status
-    response.headers.contentType = MediaType.APPLICATION_JSON
+    private inline fun <reified T> writeJsonResponse(
+        exchange: ServerWebExchange,
+        status: HttpStatus,
+        body: ApiResponse<T>
+    ): Mono<Void> {
+        val response = exchange.response
+        response.statusCode = status
+        response.headers.contentType = MediaType.APPLICATION_JSON
 
-    val jsonString = Json.encodeToJsonElement(body).toString()
-    val buffer = response.bufferFactory().wrap(jsonString.toByteArray())
-    return response.writeWith(Mono.just(buffer))
+        val jsonString = Json.encodeToJsonElement(body).toString()
+        val buffer = response.bufferFactory().wrap(jsonString.toByteArray())
+        return response.writeWith(Mono.just(buffer))
+    }
 }
