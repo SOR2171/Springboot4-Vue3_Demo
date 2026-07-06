@@ -23,9 +23,9 @@ class FlowLimitFilter(
     @param:Value($$"${app.flow-limit.count}")
     private val limitCount: Int,
     @param:Value($$"${app.flow-limit.limit-time}")
-    private val limitTime: Int,
+    private val limitTime: Long,
     @param:Value($$"${app.flow-limit.ban-time}")
-    private val expireTime: Int,
+    private val expireTime: Long,
 ) : WebFilter {
 
     override fun filter(exchange: ServerWebExchange, chain: WebFilterChain): Mono<Void> {
@@ -61,14 +61,14 @@ class FlowLimitFilter(
                     if (count == 1L) {
                         template.expire(
                             counterKey,
-                            Duration.ofSeconds(limitTime.toLong())
+                            Duration.ofSeconds(limitTime)
                         ).thenReturn(true)
                     } else if (count > limitCount) {
                         template.opsForValue()
                             .set(
                                 blockKey,
                                 "1",
-                                Duration.ofSeconds(expireTime.toLong())
+                                Duration.ofSeconds(expireTime)
                             )
                             .thenReturn(false)
                     } else {
