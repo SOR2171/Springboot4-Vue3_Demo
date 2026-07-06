@@ -13,6 +13,7 @@ class WebSocketConfig(
     private val exampleHandler: ExampleHandler,
     private val testHandler: TestHandler
 ) {
+
     @Bean
     fun handlerMapping(): HandlerMapping {
         val map = mapOf(

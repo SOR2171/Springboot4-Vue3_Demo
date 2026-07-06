@@ -6,7 +6,7 @@ import kotlinx.serialization.json.Json
 @Serializable
 data class ApiResponse<T>(
     val code: Int,
-    val data: T,
+    val data: T?,
     val message: String
 ) {
     companion object {
@@ -15,21 +15,24 @@ data class ApiResponse<T>(
         }
 
         // 针对无 data 返回的情况，统一使用 Any?
-        fun success(message: String = "Success"): ApiResponse<Any?> {
+        fun <T> success(message: String = "Success"): ApiResponse<T> {
             return ApiResponse(200, null, message)
         }
 
-        fun <T> failure(code: Int = 401, data: T, message: String?): ApiResponse<T> {
+        fun <T> failure(code: Int, data: T?, message: String?): ApiResponse<T> {
             return ApiResponse(code, data, message ?: "Failure")
         }
 
-        fun unauthenticated(message: String?) =
-            failure(401, null, message)
+        fun <T> unauthenticated(message: String?) =
+            failure<T>(401, null, message)
 
-        fun forbidden(message: String?) =
-            failure(403, null, message)
+        fun <T> forbidden(message: String?) =
+            failure<T>(403, null, message)
 
-        fun logoutFailed(message: String = ""): ApiResponse<Any?> {
+        fun <T> innerError(message: String?) =
+            failure<T>(500, null, message)
+
+        fun <T> logoutFailed(message: String = ""): ApiResponse<T> {
             val formatMessage = if (message.isBlank()) "" else ": $message"
             return failure(400, null, "Logout Failed$formatMessage")
         }

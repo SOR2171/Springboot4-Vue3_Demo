@@ -45,7 +45,7 @@ class FlowLimitFilter(
         response.statusCode = HttpStatus.FORBIDDEN
         response.headers.contentType = MediaType.APPLICATION_JSON
         val buffer = response.bufferFactory()
-            .wrap(ApiResponse.forbidden("Too many requests").toJsonString().toByteArray())
+            .wrap(ApiResponse.forbidden<Any>("Too many requests").toJsonString().toByteArray())
         return response.writeWith(Mono.just(buffer))
     }
 
