@@ -6,9 +6,9 @@ import org.springframework.web.reactive.socket.WebSocketSession
 import reactor.core.publisher.Mono
 
 @Component
+@WsHandler("/ws/test")
 class TestHandler : WebSocketHandler {
     override fun handle(session: WebSocketSession): Mono<Void> {
-        // ws://localhost:8080/ws/test
         val output = session.receive()
             .map { msg ->
                 val userText = msg.payloadAsText
