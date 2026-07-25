@@ -1,56 +1,39 @@
 package com.github.sor2171.backend.entity
 
 import kotlin.reflect.KClass
-import kotlin.reflect.KProperty
+import kotlin.reflect.KMutableProperty1
+import kotlin.reflect.KProperty1
 import kotlin.reflect.full.createInstance
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.memberProperties
-import kotlin.reflect.jvm.javaField
+import kotlin.reflect.jvm.isAccessible
 
 interface DataCopy {
-
     fun <T : Any> toAnotherObject(
         toClass: KClass<T>,
-        otherProperties: Map<String, Any?>
+        otherProperties: Map<String, Any?> = emptyMap()
     ): T {
-        try {
-            val voProperties = toClass.declaredMemberProperties
+        @Suppress("UNCHECKED_CAST")
+        val sourceProps = this::class.memberProperties
+            .associate { it.name to (it as KProperty1<Any, *>).get(this) }
+        return try {
             val vo = toClass.createInstance()
-            for (voProperty in voProperties)
-                copyFieldData(voProperty, otherProperties, vo)
-            return vo
+            for (prop in toClass.declaredMemberProperties) {
+                @Suppress("UNCHECKED_CAST")
+                val mutableProp = prop as? KMutableProperty1<Any, Any?> ?: continue
+                val value = when {
+                    sourceProps.containsKey(prop.name) -> sourceProps[prop.name]
+                    otherProperties.containsKey(prop.name) -> otherProperties[prop.name]
+                    else -> continue
+                }
+                mutableProp.isAccessible = true
+                mutableProp.set(vo, value)
+            }
+            vo
         } catch (e: ReflectiveOperationException) {
             throw RuntimeException(
-                "${toClass.simpleName} has no fields.",
-                e
+                "Failed to instantiate ${toClass.simpleName}. Does it have a no-arg constructor?", e
             )
-        }
-    }
-
-    private fun copyFieldData(
-        toProperty: KProperty<*>,
-        otherProperties: Map<String, Any?>,
-        another: Any
-    ) {
-        try {
-            val thisProperty = this::class.memberProperties
-                .firstOrNull { it.name == toProperty.name }
-
-            val value =
-                if (thisProperty != null) {
-                    thisProperty.getter.call(this)
-                } else if (otherProperties.containsKey(toProperty.name))
-                    otherProperties[toProperty.name]
-                else
-                    throw RuntimeException(
-                        "Property ${toProperty.name} not found."
-                    )
-
-            val field = toProperty.javaField!!
-            field.isAccessible = true
-            field.set(another, value)
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
     }
 }
