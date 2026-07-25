@@ -4,6 +4,7 @@ import com.auth0.jwt.JWT
 import com.auth0.jwt.JWTVerifier
 import com.auth0.jwt.algorithms.Algorithm
 import com.auth0.jwt.interfaces.DecodedJWT
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.security.core.userdetails.User
@@ -16,14 +17,15 @@ import java.util.concurrent.TimeUnit
 class JwtUtils(
     @param:Value($$"${spring.security.jwt.key}")
     private val key: String,
-
     @param:Value($$"${spring.security.jwt.expire-hours}")
     private val expireHours: Int,
 
-    private val template: StringRedisTemplate,
-    private val algorithm: Algorithm = Algorithm.HMAC256(key),
-    private val jwtVerifier: JWTVerifier = JWT.require(algorithm).build()
+    private val template: StringRedisTemplate
 ) {
+    private val algorithm: Algorithm = Algorithm.HMAC256(key)
+    private val jwtVerifier: JWTVerifier = JWT.require(algorithm).build()
+    private val logger = LoggerFactory.getLogger(this::class.java)
+    
     fun invalidateJwt(headerToken: String?): Boolean {
         val token = this.convertToToken(headerToken) ?: return false
         try {
@@ -31,7 +33,7 @@ class JwtUtils(
             val id = jwt.id
             return deleteToken(id, jwt.expiresAt)
         } catch (e: Exception) {
-            println(e.message)
+            logger.error("Error occurred while invalidating JWT", e)
             return false
         }
     }
@@ -62,7 +64,7 @@ class JwtUtils(
             else decodedJWT
             
         } catch (e: Exception) {
-            println(e.message)
+            logger.error("Error occurred while resolving JWT", e)
             return null
         }
     }
