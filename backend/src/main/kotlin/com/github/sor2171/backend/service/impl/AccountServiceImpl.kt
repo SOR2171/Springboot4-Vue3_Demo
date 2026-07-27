@@ -10,104 +10,136 @@ import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
+import reactor.core.scheduler.Schedulers
+import javax.security.auth.login.AccountNotFoundException
 
 @Service
 class AccountServiceImpl : ServiceImpl<AccountMapper, Account>(), AccountService {
 
-    val logger = LoggerFactory.getLogger(this::class.java)!!
+    private val logger = LoggerFactory.getLogger(this::class.java)
 
-    override fun findByUsername(username: String): Mono<UserDetails> {
+    override fun findByUsername(
+        username: String
+    ): Mono<UserDetails> {
+
         return findAccountByName(username)
-            .switchIfEmpty(Mono.error(UsernameNotFoundException("Account with name $username not found")))
-            .map { account ->
-                User.withUsername(username)
-                    .password(account.password)
-                    .roles(account.role)
+            .map {
+                User.withUsername(it.username)
+                    .password(it.password)
+                    .roles(it.role)
                     .build()
+            }
+            .onErrorMap(
+                AccountNotFoundException::class.java
+            ) {
+                UsernameNotFoundException(
+                    "User not found"
+                )
             }
     }
 
     override fun findAccountByName(username: String): Mono<Account> =
-        findAccount("name", username) {
+        findAccount("username") {
             ktQuery()
                 .eq(Account::username, username)
                 .one()
         }
 
     override fun findAccountByEmail(email: String): Mono<Account> =
-        findAccount("email", email) {
+        findAccount("email") {
             ktQuery()
                 .eq(Account::email, email)
                 .one()
         }
 
+    private fun <T : Any> blockingCall(
+        block: () -> T?
+    ): Mono<T> =
+        Mono.fromCallable(block)
+            .subscribeOn(Schedulers.boundedElastic())
+            .flatMap {
+                Mono.just(it)
+            }
+
     private fun findAccount(
         fieldName: String,
-        value: String,
         query: () -> Account?
-    ): Mono<Account> =
-        Mono.fromCallable {
-            logger.info("Find account with {} {}", fieldName, value)
+    ): Mono<Account> {
+        return blockingCall {
+            logger.info(
+                "Searching account by {}",
+                fieldName
+            )
             query()
         }.switchIfEmpty(
             Mono.error(
-                UsernameNotFoundException("Account with $fieldName $value not found")
+                AccountNotFoundException()
             )
         )
+    }
 
-    override fun findAccountByNameOrEmail(text: String): Mono<Account> =
-        findAccountByEmail(text).onErrorResume(
-            UsernameNotFoundException::class.java
-        ) {
-            findAccountByName(text)
-        }
+    override fun findAccountByNameOrEmail(
+        text: String
+    ): Mono<Account> {
+        return blockingCall {
+            logger.info(
+                "Searching account by identifier"
+            )
+            ktQuery()
+                .and {
+                    it.eq(Account::email, text)
+                        .or()
+                        .eq(Account::username, text)
+                }
+                .one()
+        }.switchIfEmpty(
+            Mono.error(AccountNotFoundException())
+        )
+    }
 
-    override fun existAccountByName(username: String): Mono<Boolean> =
-        Mono.fromCallable {
-            logger.info("Determine if name {} exists", username)
+    override fun existAccountByName(
+        username: String
+    ): Mono<Boolean> {
+        return blockingCall {
             ktQuery()
                 .eq(Account::username, username)
                 .exists()
-        }
 
-    override fun existAccountByEmail(email: String): Mono<Boolean> =
-        Mono.fromCallable {
-            logger.info("Determine if email {} exists", email)
+        }
+    }
+
+    override fun existAccountByEmail(
+        email: String
+    ): Mono<Boolean> {
+        return blockingCall {
             ktQuery()
                 .eq(Account::email, email)
                 .exists()
+
         }
+    }
 
     override fun resetPasswordByEmail(
         email: String,
         encodedPassword: String
-    ): Mono<Void> =
-        existAccountByEmail(email)
-            .flatMap { exists ->
-                if (!exists) {
-                    return@flatMap Mono.error(
-                        UsernameNotFoundException(
-                            "Account with email $email not found"
-                        )
-                    )
-                }
-
-                Mono.fromCallable {
-                    ktUpdate()
-                        .eq(Account::email, email)
-                        .set(Account::password, encodedPassword)
-                        .update()
-                }
-            }
-            .flatMap { success ->
-                if (success) {
+    ): Mono<Void> {
+        return blockingCall {
+            ktUpdate()
+                .eq(Account::email, email)
+                .set(
+                    Account::password,
+                    encodedPassword
+                )
+                .update()
+        }
+            .flatMap { updated ->
+                if (updated) {
                     Mono.empty()
                 } else {
                     Mono.error(
-                        IllegalStateException(
-                            "Failed to reset password"
-                        )
+                        AccountNotFoundException()
                     )
                 }
             }
+    }
 }
