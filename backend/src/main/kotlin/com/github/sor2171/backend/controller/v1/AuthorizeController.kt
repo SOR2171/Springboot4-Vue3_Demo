@@ -66,7 +66,7 @@ class AuthorizeController(
         return service
             .jwtTokenRelogin(authorization)
             ?.map { ApiResponse.success(it) }
-            ?: Mono.just(messageHandler("Please login with password."))
+            ?: Mono.just(ApiResponse.failure(401, null, "Please login with password."))
     }
 
     private fun messageHandler(wrongMessage: String): ApiResponse<Any?> {

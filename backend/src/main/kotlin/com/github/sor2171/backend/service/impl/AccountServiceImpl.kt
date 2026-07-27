@@ -57,9 +57,6 @@ class AccountServiceImpl : ServiceImpl<AccountMapper, Account>(), AccountService
     ): Mono<T> =
         Mono.fromCallable(block)
             .subscribeOn(Schedulers.boundedElastic())
-            .flatMap {
-                Mono.just(it)
-            }
 
     private fun findAccount(
         fieldName: String,

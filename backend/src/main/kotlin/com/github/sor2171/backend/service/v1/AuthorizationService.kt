@@ -54,40 +54,39 @@ class AuthorizationService(
         val (email, code, username, password) = vo
 
         return verifyCode(email, code)
-            .filter { it.isBlank() }
-            .switchIfEmpty(Mono.just("wrong code"))
-            .flatMap {
-                accountService.existAccountByEmail(email)
-            }
-            .flatMap { emailExists ->
-                if (emailExists) {
-                    Mono.just("account with the same email already exists.")
-                } else {
-                    accountService.existAccountByName(username).flatMap { usernameExists ->
-                        if (usernameExists) {
-                            Mono.just("username already exists.")
-                        } else {
-                            val account = Account(
-                                id = null,
-                                username = username,
-                                password = encoder.encode(password)!!,
-                                email = email,
-                                role = "user",
-                                registerTime = getCurrentDateTime()
-                            )
-
-                            Mono.fromCallable { accountService.save(account) }
-                                .flatMap { success ->
-                                    if (success) {
-                                        stringRedisTemplate.delete(Const.VERIFY_EMAIL_DATA + email)
-                                            .thenReturn("")
-                                    } else {
-                                        Const.INTERNAL_ERROR_MONO
-                                    }
-                                }
-                        }
-                    }
+            .flatMap { result ->
+                if (result.isNotBlank()) {
+                    return@flatMap Mono.just(result)
                 }
+                accountService.existAccountByEmail(email)
+                    .flatMap { emailExists ->
+                        if (emailExists) {
+                            return@flatMap Mono.just("account with the same email already exists.")
+                        }
+                        accountService.existAccountByName(username)
+                            .flatMap { usernameExists ->
+                                if (usernameExists) {
+                                    return@flatMap Mono.just("username already exists.")
+                                }
+                                val account = Account(
+                                    id = null,
+                                    username = username,
+                                    password = encoder.encode(password)!!,
+                                    email = email,
+                                    role = "user",
+                                    registerTime = getCurrentDateTime()
+                                )
+                                Mono.fromCallable { accountService.save(account) }
+                                    .flatMap { success ->
+                                        if (success) {
+                                            stringRedisTemplate.delete(Const.VERIFY_EMAIL_DATA + email)
+                                                .thenReturn("")
+                                        } else {
+                                            Const.INTERNAL_ERROR_MONO
+                                        }
+                                    }
+                            }
+                    }
             }
     }
 
