@@ -1,125 +1,124 @@
-## localhost:8080/api
+# API 文档
 
-所有返回的json对象总有如下格式
+Base URL：`http://localhost:8080/api`
 
-```
-{
-    "code": int,
-    "message": string,
-    "data": T
+## 通用约定
+
+所有接口均返回统一 JSON 结构：
+
+```typescript
+class Response<T> {
+    "code": number;
+    "message": string;
+    "data": T | null;
 }
 ```
 
-接下来将省略`/api`并只给出`T`的类声明
+- `code === 200` 表示成功；**`code !== 200` 时 `data` 恒为 `null`**
+- 除特别标注（公开）外，接口需在请求头携带 `Authorization: Bearer <token>`
+- 下文路径均省略 `/api` 前缀，`data` 仅给出 `T` 的声明
+- 部分 `/test` 接口的返回值不遵循上述格式
 
-当`"code"`不是`200`时，`"data"`必定为`null`
+## 接口总览
 
-部分`/api/test`的返回值不遵循上述格式
+| 分组 | 路径前缀   | 说明                              |
+|------|------------|-----------------------------------|
+| 测试 | `/test`    | 连通性测试                        |
+| 认证 | `/v1/auth` | 登录 / 注册 / 验证码 / Token 管理 |
 
-## /auth
+---
+
+## 分组：测试 `/test`
+
+### GET /hello
+
+公开接口。
+
+**响应**
+
+```typescript
+"Hello Kotlin WebFlux!"
+```
+
+---
+
+## 分组：认证 `/v1/auth`
+
+| 方法   | 路径                      | 认证 | 说明                     |
+|--------|---------------------------|------|--------------------------|
+| POST   | `/login`                  | 公开 | 登录，获取 Token         |
+| GET    | `/logout`                 | 需要 | 注销，Token 加入黑名单   |
+| GET    | `/ask-code`               | 公开 | 发送邮箱验证码           |
+| POST   | `/register`               | 公开 | 邮箱注册                 |
+| POST   | `/reset`                  | 公开 | 重置密码                 |
+| GET    | `/relogin`                | 需要 | 用旧 Token 换取新 Token  |
 
 ### POST /login
 
-Authorization: 无
+**请求参数**
 
-key: username, password
+| 字段     | 类型   | 说明     |
+|----------|--------|----------|
+| username | string | 用户名   |
+| password | string | 密码     |
 
-data：
+**响应 data**
 
-```
-{
-    "username": string,
-    "role": string,
-    "token": sting,
-    "expire": time
+```typescript
+class data {
+    "username": string;
+    "role": string;
+    "token": string;
+    "expire": Date;
 }
 ```
 
 ### GET /logout
 
-Authorization: Bearer $Token
+**请求参数**：无
 
-key: 无
+**响应 data**：`null`
 
-data：
+### GET /ask-code
 
-```
-null
-```
+**请求参数**
 
-### GET /ask-code?email=******&type=register
+| 字段  | 类型                        | 说明                               |
+|-------|-----------------------------|------------------------------------|
+| email | string                      | 接收验证码的邮箱                   |
+| type  | `register` \| `reset`       | 验证码用途（注册 / 重置密码）      |
 
-Authorization: 无
-
-key: 无
-
-data：
-
-```
-null
-```
-
-### GET /ask-code?email=******&type=reset
-
-Authorization: 无
-
-key: 无
-
-data：
-
-```
-null
-```
+**响应 data**：`null`
 
 ### POST /register
 
-Authorization: 无
+**请求体字段**：`email`、`code`、`username`、`password`
 
-key: 无
-
-data：email, code, username, password
-
-```
-null
-```
+**响应 data**：`null`
 
 ### POST /reset
 
-Authorization: 无
+**请求体字段**：`email`、`code`、`password`
 
-key: email, code, password
-
-data：
-
-```
-null
-```
+**响应 data**：`null`
 
 ### GET /relogin
 
-Authorization: Bearer $Token
+**请求参数**：无
 
-key: 无
+**响应 data**
 
-data：
-
-```
-{
-    "token": sting,
-    "expire": time
+```typescript
+class data {
+    "token": string;
+    "expire": time;
 }
 ```
 
-## /test
+---
 
-### GET /hello
+## 其他
 
-Authorization: Bearer $Token
+### WebSocket
 
-key: 无
-
-回复：
-
-```
-Hello Kotlin WebFlux!
-```
+`ws://localhost:8080/ws` — 目前不支持
