@@ -10,7 +10,7 @@ function takeAccessToken(): string | null {
 
     try {
         const authObject: JwtAuth = JSON.parse(str);
-        if (authObject.expire < Date.now()) {
+        if (new Date(authObject.expire).getTime() < Date.now()) {
             deleteAccessToken();
             ElMessage.warning('Your session has expired, please log in again.');
             return null;
@@ -22,7 +22,7 @@ function takeAccessToken(): string | null {
     }
 }
 
-function storeAccessToken(token: string, remember: boolean, expire: number): void {
+function storeAccessToken(token: string, remember: boolean, expire: string): void {
     const authObject: JwtAuth = {
         token: token,
         expire: expire

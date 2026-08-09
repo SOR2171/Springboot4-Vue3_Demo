@@ -8,6 +8,7 @@ import com.github.sor2171.backend.entity.vo.request.PasswordResetVO
 import com.github.sor2171.backend.entity.vo.response.ReloginVO
 import com.github.sor2171.backend.service.AccountService
 import com.github.sor2171.backend.utils.Const
+import com.github.sor2171.backend.utils.DateUtils
 import com.github.sor2171.backend.utils.DateUtils.getCurrentDateTime
 import com.github.sor2171.backend.utils.FlowUtils
 import com.github.sor2171.backend.utils.JwtUtils
@@ -120,7 +121,7 @@ class AuthorizationService(
         val voMono = accountMono.map {
             ReloginVO(
                 jwtUtils.createJwt(user, it.id!!, it.username),
-                jwtUtils.expiresTime().toInstant().toString()
+                DateUtils.dateToLocalDateTime(jwtUtils.expiresTime())
             )
         }
         return voMono

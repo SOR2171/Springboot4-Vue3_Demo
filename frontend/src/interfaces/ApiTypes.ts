@@ -1,6 +1,6 @@
 export interface JwtAuth {
     token: string;
-    expire: number;
+    expire: string;
 }
 
 export interface ApiResponse<T = any> {
@@ -11,7 +11,7 @@ export interface ApiResponse<T = any> {
 
 export interface LoginResponse {
     token: string;
-    expire: number;
+    expire: string;
     username: string;
 }
 
