@@ -25,7 +25,7 @@ class JwtUtils(
     private val algorithm: Algorithm = Algorithm.HMAC256(key)
     private val jwtVerifier: JWTVerifier = JWT.require(algorithm).build()
     private val logger = LoggerFactory.getLogger(this::class.java)
-    
+
     fun invalidateJwt(headerToken: String?): Boolean {
         val token = this.convertToToken(headerToken) ?: return false
         try {
@@ -59,10 +59,10 @@ class JwtUtils(
             val decodedJWT = jwtVerifier.verify(token)
             if (this.isInvalidToken(decodedJWT.id)) return null
             val expiresAt = decodedJWT.expiresAt
-            
+
             return if (Date().after(expiresAt)) null
             else decodedJWT
-            
+
         } catch (e: Exception) {
             logger.error("Error occurred while resolving JWT", e)
             return null
@@ -104,6 +104,8 @@ class JwtUtils(
         return cal.time
     }
 
-    fun convertToToken(headerToken: String?): String? =
-        headerToken?.replace("Bearer ", "")
+    fun convertToToken(headerToken: String?): String? {
+        val token = headerToken?.replace("Bearer ", "")?.trim()
+        return token?.takeIf { it.isNotEmpty() }
+    }
 }
