@@ -23,9 +23,9 @@ class FlowLimitFilter(
     @param:Value($$"${app.flow-limit.count}")
     private val limitCount: Int,
     @param:Value($$"${app.flow-limit.limit-time}")
-    private val limitTime: Long,
+    private val limitTime: Int,
     @param:Value($$"${app.flow-limit.ban-time}")
-    private val expireTime: Long,
+    private val expireTime: Int,
 ) : WebFilter {
 
     override fun filter(exchange: ServerWebExchange, chain: WebFilterChain): Mono<Void> {
@@ -45,7 +45,7 @@ class FlowLimitFilter(
         response.statusCode = HttpStatus.FORBIDDEN
         response.headers.contentType = MediaType.APPLICATION_JSON
         val buffer = response.bufferFactory()
-            .wrap(ApiResponse.forbidden<Any>("Too many requests").toJsonString().toByteArray())
+            .wrap(ApiResponse.forbidden("Too many requests").toJsonString().toByteArray())
         return response.writeWith(Mono.just(buffer))
     }
 
@@ -61,14 +61,14 @@ class FlowLimitFilter(
                     if (count == 1L) {
                         template.expire(
                             counterKey,
-                            Duration.ofSeconds(limitTime)
+                            Duration.ofSeconds(limitTime.toLong())
                         ).thenReturn(true)
                     } else if (count > limitCount) {
                         template.opsForValue()
                             .set(
                                 blockKey,
                                 "1",
-                                Duration.ofSeconds(expireTime)
+                                Duration.ofSeconds(expireTime.toLong())
                             )
                             .thenReturn(false)
                     } else {

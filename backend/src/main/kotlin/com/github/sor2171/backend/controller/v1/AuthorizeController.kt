@@ -1,10 +1,11 @@
-package com.github.sor2171.backend.controller.v1
+﻿package com.github.sor2171.backend.controller.v1
 
 import com.github.sor2171.backend.entity.ApiResponse
 import com.github.sor2171.backend.entity.enums.EmailType
 import com.github.sor2171.backend.entity.vo.request.EmailRegisterVO
 import com.github.sor2171.backend.entity.vo.request.PasswordResetVO
 import com.github.sor2171.backend.service.v1.AuthorizationService
+import com.github.sor2171.backend.utils.Const
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
@@ -31,21 +32,21 @@ class AuthorizeController(
         logger.info("Trying to ask code")
         val ip = exchange.request.remoteAddress?.address?.hostAddress ?: "unknown"
         return service.askEmailVerifyCode(type, email, ip)
-            .map(::messageHandler)
+            .map(Const::messageHandler)
     }
 
     @PostMapping("/register")
     fun emailRegister(@RequestBody @Valid vo: EmailRegisterVO): Mono<ApiResponse<Any?>> {
         logger.info("Trying to register")
         return service.registerEmailAccount(vo)
-            .map(::messageHandler)
+            .map(Const::messageHandler)
     }
 
     @PostMapping("/reset")
     fun emailResetPassword(@RequestBody @Valid vo: PasswordResetVO): Mono<ApiResponse<Any?>> {
         logger.info("Trying to reset password")
         return service.resetEmailAccountPassword(vo)
-            .map(::messageHandler)
+            .map(Const::messageHandler)
     }
 
     @GetMapping("/logout")
@@ -67,13 +68,5 @@ class AuthorizeController(
             .jwtTokenRelogin(authorization)
             ?.map { ApiResponse.success(it) }
             ?: Mono.just(ApiResponse.failure(401, null, "Please login with password."))
-    }
-
-    private fun messageHandler(wrongMessage: String): ApiResponse<Any?> {
-        return if (wrongMessage.isBlank()) {
-            ApiResponse.success()
-        } else {
-            ApiResponse.failure(400, null, wrongMessage)
-        }
     }
 }

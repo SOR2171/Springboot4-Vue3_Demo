@@ -1,18 +1,29 @@
 package com.github.sor2171.backend.utils
 
+import com.github.sor2171.backend.entity.ApiResponse
 import reactor.core.publisher.Mono
 
 object Const {
     const val FLOW_LIMIT_ORDER = -101
-    
+
     const val JWT_BLACK_LIST = "jwt:blacklist:"
     const val VERIFY_EMAIL_LIMIT = "verify:email:limit:"
     const val VERIFY_EMAIL_DATA = "verify:email:data:"
 
     const val FLOW_LIMIT_COUNTER = "flow:counter:"
     const val FLOW_LIMIT_BLOCK = "flow:block:"
-    
+
     const val WS_REQUEST_TOKEN = "ws:token:"
 
-    val INTERNAL_ERROR_MONO = Mono.just("something went wrong. Please contact the administrator.")
+    const val INTERNAL_ERROR_STR = "something went wrong. Please contact the administrator."
+    val INTERNAL_ERROR_MONO = Mono.just(INTERNAL_ERROR_STR)
+
+    // for Controllers
+    fun messageHandler(wrongMessage: String): ApiResponse<Any?> {
+        return if (wrongMessage.isBlank()) {
+            ApiResponse.success()
+        } else {
+            ApiResponse.failure(400, null, wrongMessage)
+        }
+    }
 }

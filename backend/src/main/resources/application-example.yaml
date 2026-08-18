@@ -35,7 +35,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
 
 mybatis-plus:
-  type-handlers-package: com.github.sor2171.backend.config
+  type-handlers-package: club.itstudio.itmanager.mapper.typehandler
 
 app:
   flow-limit:

@@ -67,14 +67,14 @@ class SecurityConfig(
                     writeJsonResponse(
                         exchange,
                         HttpStatus.UNAUTHORIZED,
-                        ApiResponse.unauthenticated<Any>(ex.message)
+                        ApiResponse.unauthenticated(ex.message)
                     )
                 }
                     .accessDeniedHandler { exchange, ex ->
                         writeJsonResponse(
                             exchange,
                             HttpStatus.FORBIDDEN,
-                            ApiResponse.forbidden<Any>(ex.message)
+                            ApiResponse.forbidden(ex.message)
                         )
                     }
             }
@@ -112,7 +112,7 @@ class SecurityConfig(
             writeJsonResponse(
                 webFilterExchange.exchange,
                 HttpStatus.UNAUTHORIZED,
-                ApiResponse.unauthenticated<Any>(exception.message)
+                ApiResponse.unauthenticated(exception.message)
             )
         }
         return filter

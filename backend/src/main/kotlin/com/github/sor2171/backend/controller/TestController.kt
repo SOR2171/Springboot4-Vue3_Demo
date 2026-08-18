@@ -17,12 +17,12 @@ class TestController(
     fun test(): Mono<String> = Mono.just("Hello Kotlin WebFlux!")
 
     @GetMapping("/wstoken")
-    fun testToken(): Mono<ApiResponse<String>> =
+    fun testToken(): Mono<ApiResponse<Any?>> =
         wsTokenService.registerToken(ExampleHandler::class)
             .map { token ->
-                ApiResponse.success(data = token)
+                ApiResponse.success<Any?>(data = token)
             }
             .onErrorResume { e ->
-                Mono.just(ApiResponse.innerError(e.message))
+                Mono.just(ApiResponse.failure(500, null, e.message))
             }
 }

@@ -10,8 +10,8 @@ import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.security.core.userdetails.User
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.stereotype.Component
+import java.time.Duration
 import java.util.*
-import java.util.concurrent.TimeUnit
 
 @Component
 class JwtUtils(
@@ -44,8 +44,7 @@ class JwtUtils(
         template.opsForValue().set(
             Const.JWT_BLACK_LIST + uuid,
             "deleted",
-            expire,
-            TimeUnit.MILLISECONDS
+            Duration.ofMillis(expire)
         )
         return true
     }
