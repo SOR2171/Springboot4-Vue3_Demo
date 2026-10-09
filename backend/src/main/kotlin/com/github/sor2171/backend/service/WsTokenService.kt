@@ -24,7 +24,7 @@ class WsTokenService(
         expireTime: Long? = null,
     ): Mono<String> {
         val token = UUID.randomUUID().toString()
-        val key = "$WS_REQUEST_TOKEN:${wsType.simpleName}:" + UUID.randomUUID().toString()
+        val key = "$WS_REQUEST_TOKEN:${wsType.simpleName}:$token"
         return template.opsForValue().set(
             key,
             "1",

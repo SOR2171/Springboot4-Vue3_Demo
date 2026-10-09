@@ -114,7 +114,7 @@ class AuthorizationService(
     }
 
     fun jwtTokenRelogin(headerToken: String?): Mono<ReloginVO>? {
-        val user = jwtUtils.resolveJwt(headerToken?.substring("Bearer ".length))
+        val user = jwtUtils.resolveJwt(headerToken)
             ?.let { jwtUtils.toUser(it) }
             ?: return null
         val accountMono = accountService.findAccountByName(user.username)
